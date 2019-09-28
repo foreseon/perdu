@@ -11,7 +11,7 @@ void writeFile(String, String);
 
 
 bool wifiStatus = false ;
-int language = 1; //EN = 0, TR = 1
+int language = 0; //EN = 0, TR = 1
 char flag_esc=0;
 int press_count=0;
 int inByte=0;
@@ -25,6 +25,7 @@ void setup() {
   Keyboard.begin(); 
  //runCMD("test",true);keyboardSerial
    pinMode(wifiStatus, INPUT);
+   
 }
 void readIncomingCommand()
 {
@@ -75,8 +76,9 @@ void loop() {
 
  
   
- 
+  if(inByte != 27)
   readIncomingCommand();
+  
   keyboardSerial.listen();
 
   
@@ -105,8 +107,19 @@ void loop() {
         // Previous char was ESC - Decode all the escaped keys
         switch(inByte)
         {
-            
-            case 71:
+            case 0x49:
+            Serial.print("[PgUp]");                      
+            keyname = "[PgUp]";
+            Keyboard.write(KEY_PAGE_UP);
+            pressFlag=true;             
+              break;
+            case 0x51:
+            Serial.print("[PgDn]");
+            keyname = "[PgDn]";
+            Keyboard.write(KEY_PAGE_DOWN);
+              break; 
+                  
+            case 0x47:
             Serial.print("[HOME]");
             keyname = "[HOME]";
             Keyboard.write(KEY_HOME);
@@ -660,7 +673,26 @@ void keyboardWriteTR(byte inByte){
       keyname = '\'';
       
       break;
-
+      case 47: 
+      Keyboard.press(tersslash);
+      keyname = "/";
+      
+      break;
+      case 42: 
+      Keyboard.press(yildiz);
+      keyname = "*";
+      
+      break;
+      case 45: 
+      Keyboard.press(tire);
+      keyname = "-";
+      
+      break;
+      case 43: 
+      Keyboard.press(arti);
+      keyname = "+";
+      
+      break;
       case 163:
       if (lastByte == 194) 
        Keyboard.press(51);

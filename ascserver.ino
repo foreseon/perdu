@@ -25,7 +25,7 @@ File exec_cmd_page;
 File run_page;
 File sendraw_page;
 
-const int wifiSS = D2;
+const int wifiSS = D1;
 
 void setup() {
   
@@ -44,6 +44,7 @@ void setup() {
   
   MDNS.addService("http","tcp",80);
 pinMode(wifiSS, OUTPUT);
+digitalWrite(wifiSS,HIGH);
   keystrokes = SPIFFS.open("/keystrokes.txt", "a+");
   exec_cmd_page = SPIFFS.open("/exec_cmd.html", "w+");
   exec_ps_page = SPIFFS.open("/exec_ps.html", "w+");
@@ -67,6 +68,8 @@ pinMode(wifiSS, OUTPUT);
  server.on("/exec", HTTP_GET, [](AsyncWebServerRequest *request){
   int paramsNr = request->params();
  String message = "";
+ digitalWrite(wifiSS, LOW);
+ delay(6);
 /*
 bool flag = true;
 unsigned long previousMillis = 0;        // will store last time LED was updated
@@ -170,7 +173,7 @@ unsigned long currentMillis = millis();
       Serial.print(message);
 
  
-    
+    digitalWrite(wifiSS, HIGH);
    
  
 
@@ -206,5 +209,5 @@ void loop() {
   if(Serial.available() > 0) {
     keystrokes.print(Serial.readString());
   }
-  
+
 }

@@ -1,17 +1,20 @@
+
+#include <Keyboard.h>
 #include <SoftwareSerial.h>
+
 
 SoftwareSerial keyboardSerial(9, 7); // RX, TX
 SoftwareSerial wifiSerial(10, 6); //RX, TX
 
-#include "Keyboard.h"
 void runCMD(String,bool);
 void writeFile(String, String);
+void runWindows(String);
 
 
 
 
 bool wifiStatus = false ;
-int language = 0; //EN = 0, TR = 1
+int language = 1; //EN = 0, TR = 1
 char flag_esc=0;
 int press_count=0;
 int inByte=0;
@@ -27,6 +30,7 @@ void setup() {
    pinMode(wifiStatus, INPUT);
    
 }
+
 void readIncomingCommand()
 {
 
@@ -74,10 +78,15 @@ void readIncomingCommand()
 
 void loop() {
 
+ int wifiSS = analogRead(A0);
+ Serial.println(wifiSS);
+  
  
   
-  if(inByte != 27)
+  if(inByte != 27 && wifiSS < 100)
+  {  
   readIncomingCommand();
+  }
   
   keyboardSerial.listen();
 
@@ -270,8 +279,7 @@ void loop() {
             
               
             default:
-              Serial.print("[?]");
-              Serial.println(inByte);
+              keyboardLanguageSelect(inByte);
               break;            
         }
      
@@ -740,11 +748,13 @@ void keyboardWriteTR(byte inByte){
     else // condition:lastByte = 27
     {
       Keyboard.press(KEY_RIGHT_ALT);
-
+     Serial.println("inByte:" + String(inByte));
+     Serial.println("LastByte:" + String(lastByte));
       wifiSerial.print("[ALT_GR]" + inByte);
 
       switch(inByte)
       {
+        
         case 16: Keyboard.press(113); break;
 
         case 18: Keyboard.press(101); break;
@@ -760,6 +770,7 @@ void keyboardWriteTR(byte inByte){
         case 35: Keyboard.press(185); break;
 
         case 92: Keyboard.press(solok); break;
+        
 
         default: Keyboard.press(inByte); break;
         
@@ -931,16 +942,37 @@ void runCMD(String command, bool isAdmin)
   }
   delay(300);
   keyboardPrintTR("mode con:cols=20 lines=1");
-  Keyboard.write(KEY_RETURN);
- 
-  
-  
-  
-  
- 
-  
+  Keyboard.write(KEY_RETURN);  
   keyboardPrintTR(command);
   
 }
+
+void runWindows(String command, bool)
+{
+  windowsRun();
+ delay(100);
+
+ if(isAdmin)
+ {
+ keyboardPrintTR(command);
+ delay(100);
+ Keyboard.press(KEY_LEFT_CTRL);
+ Keyboard.press(KEY_LEFT_SHIFT);
+ Keyboard.press(KEY_RETURN);
+ delay(1000);
+ 
+ Keyboard.press(KEY_LEFT_ARROW);
+ delay(100);
+ Keyboard.releaseAll();
+ Keyboard.write(KEY_RETURN);
+  }
+  else
+  {
+    keyboardPrintTR(command);
+    delay(100);
+    Keyboard.write(KEY_RETURN);
+  }
+}
+
 
   

